@@ -74,7 +74,13 @@
                                     <a href="/events/{{ $event->slug }}" class="font-medium">{{ $event->title }}</a>
                                     <div class="text-sm text-slate-600">{{ optional($event->start_at)->format('d M Y, h:i A') }}</div>
                                 </div>
-                                <a href="{{ route('events.edit', $event->slug) }}" class="text-blue-600 text-sm">Edit</a>
+                                <div class="flex items-center gap-3">
+                                    <a href="{{ route('events.scan', $event->slug) }}" class="text-slate-600 hover:text-slate-900 text-sm flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-scan-qr-code"><path d="M17 12v4a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2v-4"/><path d="M17 12a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2"/><path d="M5 7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7Z"/><line x1="12" x2="12" y1="7" y2="17"/></svg>
+                                        Scan
+                                    </a>
+                                    <a href="{{ route('events.edit', $event->slug) }}" class="text-blue-600 text-sm">Edit</a>
+                                </div>
                             </li>
                         @endforeach
                     </ul>
@@ -82,8 +88,27 @@
             </div>
 
             <div class="border rounded-xl bg-white p-6">
-                <h2 class="text-lg font-medium mb-3">My RSVPs</h2>
-                <p class="text-slate-600">Belum ada RSVP.</p>
+                <h2 class="text-lg font-medium mb-3">Tiket Saya (RSVP)</h2>
+                @if($attendees->isEmpty())
+                    <p class="text-slate-600">Belum ada RSVP.</p>
+                @else
+                    <ul class="space-y-3">
+                        @foreach ($attendees as $att)
+                            <li class="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                                <div>
+                                    <a href="/events/{{ $att->event->slug }}" class="font-medium hover:text-blue-600">{{ $att->event->title }}</a>
+                                    <div class="text-sm text-slate-600">{{ optional($att->event->start_at)->format('d M Y, h:i A') }}</div>
+                                    <div class="text-xs text-slate-500">Attendee: {{ $att->name }}</div>
+                                </div>
+                                <div>
+                                    <a href="{{ route('orders.qr.download', $att->order_id) }}" class="px-3 py-1.5 rounded bg-slate-100 text-slate-700 text-sm hover:bg-slate-200">
+                                        Tiket QR
+                                    </a>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
             </div>
 
             <div class="border rounded-xl bg-white p-6">

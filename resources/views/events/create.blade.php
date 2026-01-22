@@ -26,13 +26,9 @@
     <form method="POST" action="{{ route('events.store') }}" enctype="multipart/form-data" class="border rounded-xl p-6 bg-white space-y-5 shadow-sm">
         @csrf
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div class="md:col-span-2">
                 <label class="block text-sm mb-1">Tajuk Acara</label>
                 <input type="text" name="title" value="{{ old('title') }}" required maxlength="35" class="w-full border rounded px-3 h-12 text-lg" placeholder="Contoh: Bengkel Reka Bentuk Produk" />
-            </div>
-            <div>
-                <label class="block text-sm mb-1">Banner URL</label>
-                <input type="url" name="banner_path" value="{{ old('banner_path') }}" class="w-full border rounded px-3 h-10" placeholder="https://..." />
             </div>
         </div>
         <div class="border rounded p-4">
@@ -67,7 +63,11 @@
                 </div>
                 <div>
                     <label class="block text-sm mb-1">Jumlah Tiket</label>
-                    <input type="number" min="0" name="ticket_quantity" value="{{ old('ticket_quantity', 0) }}" class="w-full border rounded px-3 h-10" />
+                    <input type="number" min="0" id="ticketQuantity" name="ticket_quantity" value="{{ old('ticket_quantity', 0) }}" class="w-full border rounded px-3 h-10" />
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Lebihan Bayaran (RM1/peserta)</label>
+                    <input type="text" id="tierExcessFeePaid" class="w-full border rounded px-3 h-10 bg-slate-50" readonly />
                 </div>
             </div>
             <div id="pricingSponsor" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-2" style="display:none">
@@ -85,21 +85,46 @@
                 </div>
                 <div>
                     <label class="block text-sm mb-1">Jumlah Tiket</label>
-                    <input type="number" min="0" name="ticket_quantity" value="{{ old('ticket_quantity', 0) }}" class="w-full border rounded px-3 h-10" />
+                    <input type="number" min="0" id="ticketQuantitySponsor" name="ticket_quantity" value="{{ old('ticket_quantity', 0) }}" class="w-full border rounded px-3 h-10" />
+                </div>
+                <div class="md:col-span-4">
+                    <label class="block text-sm mb-1">Lebihan Bayaran (RM1/peserta)</label>
+                    <input type="text" id="tierExcessFeeSponsor" class="w-full border rounded px-3 h-10 bg-slate-50" readonly />
                 </div>
             </div>
-            <div class="text-xs text-slate-500">Pilih satu. Untuk Sponsor, sistem akan memaparkan baki yang perlu dibayar.</div>
+            <div class="text-xs text-slate-500">Pilih satu. Untuk Sponsor, sistem memaparkan baki bayar dan lebihan bayaran jika melebihi had peserta tier.</div>
         </div>
         <div>
-            <label class="block text-sm mb-1">Atau Muat Naik Banner</label>
-            <div class="flex items-center border rounded overflow-hidden">
-                <label for="bannerFileInput" class="px-3 py-2 bg-slate-100 text-slate-700 cursor-pointer">Choose File</label>
-                <span id="bannerFileName" class="px-3 py-2 text-slate-500 flex-1">No file chosen</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm mb-1">Banner URL</label>
+                    <input type="url" name="banner_path" value="{{ old('banner_path') }}" class="w-full border rounded px-3 h-10" placeholder="https://..." />
+                    <div class="text-xs text-slate-500 mt-1">Masukkan URL baharu jika ingin menukar banner. Jika tidak, biarkan kosong.</div>
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Atau Muat Naik Banner</label>
+                    <div class="flex items-center border rounded overflow-hidden">
+                        <label for="bannerFileInput" class="px-3 py-2 bg-slate-100 text-slate-700 cursor-pointer">Choose File</label>
+                        <span id="bannerFileName" class="px-3 py-2 text-slate-500 flex-1">No file chosen</span>
+                    </div>
+                    <input type="file" name="banner_file" id="bannerFileInput" accept="image/*" class="hidden" />
+                    @error('banner_file')
+                        <div class="text-red-600 text-xs mt-1">{{ $message }}</div>
+                    @enderror
+                </div>
             </div>
-            <input type="file" name="banner_file" id="bannerFileInput" accept="image/*" class="hidden" />
-            @error('banner_file')
-                <div class="text-red-600 text-xs mt-1">{{ $message }}</div>
-            @enderror
+        </div>
+        <div class="border rounded-xl bg-white overflow-hidden">
+            <div class="p-4 font-medium">Pratonton Banner</div>
+            @php($img = old('banner_path') ? (\Illuminate\Support\Str::startsWith(old('banner_path'), ['http://','https://']) ? old('banner_path') : asset(old('banner_path'))) : null)
+            <div class="px-4 pb-4">
+                @if(!empty($img))
+                    <img id="bannerPreviewImg" src="{{ $img }}" alt="Banner Preview" class="w-full h-64 object-cover">
+                @else
+                    <div id="bannerPreviewEmpty" class="w-full h-64 bg-slate-100 flex items-center justify-center text-slate-500">No image</div>
+                    <img id="bannerPreviewImg" src="" alt="Banner Preview" class="w-full h-64 object-cover hidden">
+                @endif
+            </div>
         </div>
         <div>
             <label class="block text-sm mb-1">Deskripsi (HTML Editor)</label>
@@ -168,7 +193,6 @@
         out.textContent = name;
       });
     }
-    // Pricing toggles
     function setDisabled(containerId, disabled){
       var box = document.getElementById(containerId);
       if (!box) return;
@@ -185,6 +209,7 @@
       setDisabled('pricingFree', type!=='free');
       setDisabled('pricingPaid', type!=='paid');
       setDisabled('pricingSponsor', type!=='sponsor');
+      computeDue(); computeExcess(); enforceMaxQty();
     }
     document.querySelectorAll('input[name="pricing_type"]').forEach(function(r){ r.addEventListener('change', togglePricing); });
     togglePricing();
@@ -201,15 +226,37 @@
     computeDue();
     var tier = '{{ $tier ?? 'FREE' }}';
     var maxParticipants = {{ ($tierLimits['max_participants'] ?? 0) > 0 ? ($tierLimits['max_participants']) : 'null' }};
+    function computeExcess(){
+      var paidEl = document.getElementById('tierExcessFeePaid');
+      var sponsorEl = document.getElementById('tierExcessFeeSponsor');
+      if (maxParticipants == null) {
+        if (paidEl) { paidEl.value = ''; paidEl.closest('div') && (paidEl.closest('div').style.display = 'none'); }
+        if (sponsorEl) { sponsorEl.value = ''; sponsorEl.closest('div') && (sponsorEl.closest('div').style.display = 'none'); }
+        return;
+      }
+      var qPaid = parseInt(document.getElementById('ticketQuantity')?.value || '0');
+      var qSponsor = parseInt(document.getElementById('ticketQuantitySponsor')?.value || '0');
+      var type = (document.querySelector('input[name="pricing_type"]:checked')||{}).value;
+      var q = type==='sponsor' ? qSponsor : qPaid;
+      var excess = Math.max(0, q - maxParticipants);
+      var fee = (excess * 1.0).toFixed(2);
+      if (paidEl) { paidEl.value = fee; paidEl.closest('div') && (paidEl.closest('div').style.display = ''); }
+      if (sponsorEl) { sponsorEl.value = fee; sponsorEl.closest('div') && (sponsorEl.closest('div').style.display = ''); }
+    }
     function enforceMaxQty(){
       if (maxParticipants == null) return;
       var free = document.getElementById('ticketQuantityFree');
       if (free) { free.max = String(maxParticipants); var v1 = parseInt(free.value||'0'); if (v1 > maxParticipants) free.value = String(maxParticipants); }
-      document.querySelectorAll('#pricingPaid input[name="ticket_quantity"],#pricingSponsor input[name="ticket_quantity"]').forEach(function(el){ el.max = String(maxParticipants); var v2 = parseInt(el.value||'0'); if (v2 > maxParticipants) el.value = String(maxParticipants); });
+      var paid = document.getElementById('ticketQuantity');
+      if (paid) { paid.max = String(maxParticipants); var v2 = parseInt(paid.value||'0'); if (v2 > maxParticipants) paid.value = String(maxParticipants); }
+      var sponsor = document.getElementById('ticketQuantitySponsor');
+      if (sponsor) { sponsor.max = String(maxParticipants); var v3 = parseInt(sponsor.value||'0'); if (v3 > maxParticipants) sponsor.value = String(maxParticipants); }
     }
     var fq = document.getElementById('ticketQuantityFree'); if (fq) fq.addEventListener('input', enforceMaxQty);
-    document.querySelectorAll('#pricingPaid input[name="ticket_quantity"],#pricingSponsor input[name="ticket_quantity"]').forEach(function(el){ el.addEventListener('input', enforceMaxQty); });
+    var pq = document.getElementById('ticketQuantity'); if (pq) pq.addEventListener('input', function(){ enforceMaxQty(); computeExcess(); });
+    var sq = document.getElementById('ticketQuantitySponsor'); if (sq) sq.addEventListener('input', function(){ enforceMaxQty(); computeExcess(); });
     enforceMaxQty();
+    computeExcess();
 
     // Limit duration by tier (frontend assist)
     var maxDays = {{ ($tierLimits['max_days'] ?? 0) > 0 ? ($tierLimits['max_days']) : 'null' }};
@@ -240,6 +287,38 @@
     if (sEl) sEl.addEventListener('change', enforceMaxEnd);
     if (eEl) eEl.addEventListener('change', enforceMaxEnd);
     enforceMaxEnd();
+
+    var bannerUrlInput = document.querySelector('input[name="banner_path"]');
+    var bannerFileInput = document.getElementById('bannerFileInput');
+    var previewImg = document.getElementById('bannerPreviewImg');
+    var previewEmpty = document.getElementById('bannerPreviewEmpty');
+    function showImg(src){
+      if (!previewImg) return;
+      if (src && src.trim() !== '') {
+        previewImg.src = src;
+        previewImg.classList.remove('hidden');
+        if (previewEmpty) previewEmpty.style.display = 'none';
+      } else {
+        previewImg.src = '';
+        previewImg.classList.add('hidden');
+        if (previewEmpty) previewEmpty.style.display = '';
+      }
+    }
+    if (bannerUrlInput) {
+      bannerUrlInput.addEventListener('input', function(e){
+        var v = e.target.value || '';
+        showImg(v);
+      });
+    }
+    if (bannerFileInput) {
+      bannerFileInput.addEventListener('change', function(e){
+        var f = (e.target.files && e.target.files[0]) ? e.target.files[0] : null;
+        if (!f) { showImg(''); return; }
+        var r = new FileReader();
+        r.onload = function(evt){ showImg(evt.target.result || ''); };
+        r.readAsDataURL(f);
+      });
+    }
   });
 </script>
 @push('head')

@@ -8,6 +8,7 @@ use App\Models\Profile;
 use App\Models\Wallet;
 use App\Models\Organization;
 use Illuminate\Support\Facades\Hash;
+use App\Services\SecurepayService;
 
 class ProfileController extends Controller
 {
@@ -176,6 +177,100 @@ class ProfileController extends Controller
         }
 
         return view('organizations.manage', compact('organizations', 'pendingByOrg'));
+    }
+
+    public function upgradeProPay(Request $request)
+    {
+        if (!Auth::check()) {
+            $request->session()->put('url.intended', route('pricing'));
+            return redirect()->guest('/login');
+        }
+
+        $user = Auth::user();
+        $profile = Profile::firstOrCreate(['user_id' => $user->id]);
+        if (in_array($profile->tier, ['PRO', 'VIP'])) {
+            return redirect()->route('profile.show')->with('status', 'Anda sudah berada pada pelan '.$profile->tier.'.');
+        }
+
+        $amount = 30.00;
+        $fee = 2.00;
+        $total = $amount + $fee;
+
+        $phone = preg_replace('/[^0-9]/', '', (string) ($profile->phone ?? ''));
+        if (empty($phone)) {
+            return back()->withErrors(['payment' => 'Sila lengkapkan nombor telefon di Profil sebelum membuat pembayaran (Profil > Maklumat Perhubungan).']);
+        }
+
+        $svc = new SecurepayService();
+        $returnUrl = route('pricing.pro.return');
+        $callbackUrl = url('subscriptions/securepay/callback');
+
+        $payload = [
+            'buyer_email' => $user->email,
+            'buyer_name' => $user->name,
+            'client_ip' => $request->ip(),
+            'order_number' => 'SUB-'.$user->id.'-'.time(),
+            'product_description' => 'BeSpoke Events Pro Subscription (1 bulan)',
+            'transaction_amount' => number_format($total, 2, '.', ''),
+            'callback_url' => $callbackUrl,
+            'redirect_url' => $returnUrl,
+            'buyer_phone' => $phone,
+        ];
+
+        try {
+            $paymentData = $svc->createPayment($payload);
+
+            if (isset($paymentData['html'])) {
+                return response($paymentData['html']);
+            }
+
+            $payUrl = $paymentData['payment_url'] ?? $paymentData['url'] ?? null;
+            if (!$payUrl) {
+                return back()->withErrors(['payment' => 'Gagal memulakan pembayaran Pro (URL tidak sah).']);
+            }
+
+            return redirect()->away($payUrl);
+        } catch (\Exception $e) {
+            return back()->withErrors(['payment' => 'Ralat sistem pembayaran: '.$e->getMessage()]);
+        }
+    }
+
+    public function upgradeProReturn(Request $request)
+    {
+        if (!Auth::check()) {
+            $request->session()->put('url.intended', route('pricing'));
+            return redirect()->guest('/login');
+        }
+
+        $user = Auth::user();
+        $profile = Profile::firstOrCreate(['user_id' => $user->id]);
+
+        $status = $request->input('payment_status');
+        if ($status === 'true' || $status === '1' || $status === true) {
+            $profile->tier = 'PRO';
+            $profile->save();
+            return redirect()->route('profile.show')->with('status', 'Tahniah! Akaun anda telah dinaik taraf ke PRO.');
+        }
+
+        return redirect()->route('pricing')->withErrors(['payment' => 'Pembayaran Pro gagal atau dibatalkan.']);
+    }
+
+    public function upgradeProCallback(Request $request)
+    {
+        $status = $request->input('payment_status');
+        $orderNumber = $request->input('order_number');
+
+        if ($orderNumber && str_starts_with((string) $orderNumber, 'SUB-') && ($status === 'true' || $status === '1' || $status === true)) {
+            $parts = explode('-', (string) $orderNumber);
+            $userId = $parts[1] ?? null;
+            if ($userId) {
+                $profile = Profile::firstOrCreate(['user_id' => $userId]);
+                $profile->tier = 'PRO';
+                $profile->save();
+            }
+        }
+
+        return response('OK');
     }
 
     public function approveMembership(Request $request, Organization $organization, int $memberId)

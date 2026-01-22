@@ -178,10 +178,8 @@
                     <div>Baki Semasa: <span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-50 text-amber-700"> {{ number_format(($wallet->credit_balance ?? 0), 4) }} SEN</span></div>
                 </div>
                 <div class="mt-3 flex gap-2">
-                    <button type="button" class="px-3 py-1.5 rounded bg-green-600 text-white text-sm">Beli</button>
-                    <button type="button" class="px-3 py-1.5 rounded bg-red-600 text-white text-sm">Jual</button>
-                    <button type="button" class="px-3 py-1.5 rounded border text-sm">Hantar</button>
-                    <button type="button" class="px-3 py-1.5 rounded border text-sm">Terima</button>
+                    <button type="button" class="px-3 py-1.5 rounded bg-green-600 text-white text-sm">Terima</button>
+                    <button type="button" class="px-3 py-1.5 rounded bg-red-600 text-white text-sm">Hantar</button>
                     <button type="button" class="px-3 py-1.5 rounded border text-sm">Transaksi</button>
                 </div>
             </div>

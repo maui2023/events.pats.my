@@ -9,6 +9,7 @@
       <div><span class="text-slate-500">Tiket:</span> {{ $ticket->name }}</div>
       <div><span class="text-slate-500">Harga:</span> RM {{ number_format((float)$ticket->price, 2) }}</div>
       <div><span class="text-slate-500">Kuantiti:</span> {{ $order->quantity }}</div>
+      <div><span class="text-slate-500">Caj perkhidmatan SecurePay:</span> RM 2.00</div>
       <div><span class="text-slate-500">Jumlah:</span> RM {{ number_format((float)$order->total_amount, 2) }}</div>
       <div><span class="text-slate-500">Status:</span> {{ strtoupper($order->status) }}</div>
     </div>
@@ -26,7 +27,7 @@
           </div>
         </div>
         <div class="mt-4 flex items-center justify-end gap-3">
-          <a href="{{ route('events.qr', [$event->slug, $attendee->id]) }}" class="px-4 py-2 rounded border">Paparkan QR Penuh</a>
+          <a href="{{ route('events.qr', [$event->slug, $attendee->qr_code]) }}" class="px-4 py-2 rounded border">Paparkan QR Penuh</a>
           <a href="{{ route('orders.qr.download', $order->id) }}" class="px-4 py-2 rounded border">Muat Turun QR</a>
           @if(!empty($calendarUrl))
             <a href="{{ $calendarUrl }}" target="_blank" class="px-4 py-2 rounded border">Masukkan ke Calendar</a>
@@ -43,7 +44,7 @@
         </form>
         <form method="POST" action="{{ route('orders.pay', $order->id) }}">
           @csrf
-          <button class="px-4 py-2 rounded bg-emerald-600 text-white">Teruskan Pembayaran (Toyyibpay)</button>
+          <button class="px-4 py-2 rounded bg-emerald-600 text-white">Teruskan Pembayaran (SecurePay)</button>
         </form>
       </div>
     @endif

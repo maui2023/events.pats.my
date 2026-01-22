@@ -25,9 +25,13 @@
                         @php($totalQty = (int) $tickets->sum('quantity'))
                         @php($totalSold = (int) $tickets->sum(function($t){ return (int)($t->sold ?? 0); }))
                         @php($remain = max(0, $totalQty - $totalSold))
-                        <span class="absolute top-2 right-2 text-xs px-2 py-1 rounded-full bg-white/90 border">{{ optional($event->start_at)->format('d M Y') }}</span>
+                        <span class="absolute top-2 right-2 text-xs px-2 py-1 rounded-full bg-slate-900/90 text-white font-semibold border border-white/40 shadow">
+                            {{ optional($event->start_at)->format('d M Y') }}
+                        </span>
                         <span class="absolute top-2 left-2 text-xs px-2 py-1 rounded-full border {{ $labelClass }}">{{ $label }}</span>
-                        <span class="absolute bottom-2 right-2 text-xs px-2 py-1 rounded-full bg-white/90 border">Baki: {{ $remain }}</span>
+                        <span class="absolute bottom-2 right-2 text-xs px-2 py-1 rounded-full bg-slate-900/90 text-white border border-white/40 shadow">
+                            Baki tiket: {{ $remain }}
+                        </span>
                     </div>
                     <div class="p-4">
                         <h2 class="text-lg font-medium">{{ $event->title }}</h2>

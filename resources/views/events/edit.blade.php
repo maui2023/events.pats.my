@@ -14,7 +14,7 @@
     <form method="POST" action="{{ route('events.update', $event->slug) }}" enctype="multipart/form-data" class="border rounded-xl p-6 bg-white space-y-5 shadow-sm">
         @csrf
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div class="md:col-span-2">
                 <label class="block text-sm mb-1">Tajuk Acara</label>
                 <input type="text" name="title" value="{{ old('title', $event->title) }}" required maxlength="35" class="w-full border rounded px-3 h-12 text-lg" />
             </div>
@@ -83,6 +83,34 @@
             </select>
             <div class="text-xs text-slate-500 mt-1">{{ $canOrg ? 'Pilih organisasi diluluskan anda (opsyenal).' : 'Organisasi tersedia untuk PRO/VIP sahaja.' }}</div>
         </div>
+
+        <div class="border rounded p-4">
+            <div class="font-medium mb-2">Petugas Imbasan (Scanners)</div>
+            <div class="text-sm text-slate-600 mb-4">
+                Lantik pengguna lain untuk mengimbas tiket QR acara ini. Mereka perlu mempunyai akaun berdaftar.
+            </div>
+
+            <div class="space-y-3 mb-6">
+                @forelse ($staffs as $staff)
+                    <div class="flex items-center justify-between bg-slate-50 p-3 rounded">
+                        <div>
+                            <div class="font-medium">{{ $staff->user->name }}</div>
+                            <div class="text-xs text-slate-500">{{ $staff->user->email }}</div>
+                        </div>
+                        <button type="button" onclick="document.getElementById('remove-staff-{{ $staff->id }}').submit()" class="text-red-600 hover:text-red-800 text-sm">
+                            Buang
+                        </button>
+                    </div>
+                @empty
+                    <div class="text-sm text-slate-500 italic">Tiada petugas dilantik.</div>
+                @endforelse
+            </div>
+            
+            <button type="button" onclick="document.getElementById('add-staff-modal').classList.remove('hidden')" class="text-sm text-blue-600 hover:underline">
+                + Tambah Petugas
+            </button>
+        </div>
+
         <div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -101,6 +129,18 @@
                         <div class="text-red-600 text-xs mt-1">{{ $message }}</div>
                     @enderror
                 </div>
+            </div>
+        </div>
+        <div class="border rounded-xl bg-white overflow-hidden">
+            <div class="p-4 font-medium">Pratonton Banner</div>
+            @php($img = $event->banner_path ? (\Illuminate\Support\Str::startsWith($event->banner_path, ['http://','https://']) ? $event->banner_path : asset($event->banner_path)) : null)
+            <div class="px-4 pb-4">
+                @if(!empty($img))
+                    <img id="bannerPreviewImg" src="{{ $img }}" alt="Banner Preview" class="w-full h-64 object-cover">
+                @else
+                    <div id="bannerPreviewEmpty" class="w-full h-64 bg-slate-100 flex items-center justify-center text-slate-500">No image</div>
+                    <img id="bannerPreviewImg" src="" alt="Banner Preview" class="w-full h-64 object-cover hidden">
+                @endif
             </div>
         </div>
         <div>
@@ -159,6 +199,45 @@
         </div>
     </form>
 </div>
+
+<!-- Modal Tambah Petugas -->
+<div id="add-staff-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="document.getElementById('add-staff-modal').classList.add('hidden')"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <form method="POST" action="{{ route('events.staff.add', $event->slug) }}" class="p-6">
+                @csrf
+                <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Tambah Petugas</h3>
+                <div class="mt-2">
+                    <p class="text-sm text-gray-500">
+                        Masukkan emel pengguna yang anda ingin lantik sebagai petugas imbasan.
+                    </p>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700">Emel Pengguna</label>
+                        <input type="email" name="email" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                </div>
+                <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:col-start-2 sm:text-sm">
+                        Tambah
+                    </button>
+                    <button type="button" onclick="document.getElementById('add-staff-modal').classList.add('hidden')" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:col-start-1 sm:text-sm">
+                        Batal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Forms for Deleting Staff -->
+@foreach ($staffs as $staff)
+    <form id="remove-staff-{{ $staff->id }}" action="{{ route('events.staff.remove', ['slug' => $event->slug, 'staffId' => $staff->id]) }}" method="POST" class="hidden">
+        @csrf
+        @method('DELETE')
+    </form>
+@endforeach
 @endsection
 
 @push('head')
@@ -341,6 +420,41 @@
     if (sEl) sEl.addEventListener('change', enforceMaxEnd);
     if (eEl) eEl.addEventListener('change', enforceMaxEnd);
     enforceMaxEnd();
+  })();
+</script>
+<script>
+  (function(){
+    var bannerUrlInput = document.querySelector('input[name="banner_path"]');
+    var bannerFileInput = document.getElementById('bannerFileInput');
+    var previewImg = document.getElementById('bannerPreviewImg');
+    var previewEmpty = document.getElementById('bannerPreviewEmpty');
+    function showImg(src){
+      if (!previewImg) return;
+      if (src && src.trim() !== '') {
+        previewImg.src = src;
+        previewImg.classList.remove('hidden');
+        if (previewEmpty) previewEmpty.style.display = 'none';
+      } else {
+        previewImg.src = '';
+        previewImg.classList.add('hidden');
+        if (previewEmpty) previewEmpty.style.display = '';
+      }
+    }
+    if (bannerUrlInput) {
+      bannerUrlInput.addEventListener('input', function(e){
+        var v = e.target.value || '';
+        showImg(v);
+      });
+    }
+    if (bannerFileInput) {
+      bannerFileInput.addEventListener('change', function(e){
+        var f = (e.target.files && e.target.files[0]) ? e.target.files[0] : null;
+        if (!f) { showImg(''); return; }
+        var r = new FileReader();
+        r.onload = function(evt){ showImg(evt.target.result || ''); };
+        r.readAsDataURL(f);
+      });
+    }
   })();
 </script>
 @endpush

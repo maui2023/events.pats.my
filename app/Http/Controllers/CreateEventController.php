@@ -85,7 +85,58 @@ class CreateEventController extends Controller
         if (in_array($tier, ['PRO','VIP'])) {
             $organizations = $user->organizations()->wherePivot('status','approved')->orderBy('name')->get();
         }
-        return view('events.edit', compact('event', 'countries', 'ticket', 'tier', 'tierLimits', 'organizations'));
+        
+        $staffs = \App\Models\EventStaff::with('user')->where('event_id', $event->id)->get();
+        
+        return view('events.edit', compact('event', 'countries', 'ticket', 'tier', 'tierLimits', 'organizations', 'staffs'));
+    }
+
+    public function addStaff(Request $request, string $slug)
+    {
+        $event = Event::where('slug', $slug)->firstOrFail();
+        
+        if ($event->organizer_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ]);
+
+        $user = \App\Models\User::where('email', $request->email)->first();
+
+        if ($user->id === $event->organizer_id) {
+            return back()->withErrors(['email' => 'Penganjur sudah mempunyai akses.']);
+        }
+
+        try {
+            \App\Models\EventStaff::create([
+                'event_id' => $event->id,
+                'user_id' => $user->id,
+                'role' => 'scanner'
+            ]);
+        } catch (\Exception $e) {
+            return back()->withErrors(['email' => 'Pengguna ini sudah ditambah sebagai petugas.']);
+        }
+
+        return back()->with('success', 'Petugas berjaya ditambah.');
+    }
+
+    public function removeStaff(Request $request, string $slug, int $staffId)
+    {
+        $event = Event::where('slug', $slug)->firstOrFail();
+        
+        if ($event->organizer_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $staff = \App\Models\EventStaff::where('id', $staffId)
+                    ->where('event_id', $event->id)
+                    ->firstOrFail();
+        
+        $staff->delete();
+
+        return back()->with('success', 'Petugas berjaya dipadam.');
     }
 
     public function store(Request $request)

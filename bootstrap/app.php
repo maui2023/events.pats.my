@@ -11,6 +11,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->validateCsrfTokens(except: [
+            'payments/toyyib/callback/*',
+            'payments/securepay/callback/*',
+            'subscriptions/securepay/callback', // In case we use this for subscriptions later
+            'pricing/pro/return',
+        ]);
         $middleware->web(append: [
             \App\Http\Middleware\SetLocale::class,
         ]);

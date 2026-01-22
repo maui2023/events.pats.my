@@ -55,3 +55,5 @@ auth.json
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+.user.ini

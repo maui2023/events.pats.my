@@ -4,7 +4,9 @@
 <div class="min-h-[70vh] flex items-center justify-center px-4">
     <div class="w-full max-w-md">
         <div class="flex items-center justify-center mb-6">
-            <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-100 text-amber-700 font-bold">BE</div>
+            <div class="text-2xl font-semibold leading-none">
+                <span class="text-[#e50914]">Be</span><span class="logo-spoke">Spoke</span>
+            </div>
         </div>
 
         @if ($errors->any())

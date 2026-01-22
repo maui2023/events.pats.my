@@ -48,6 +48,10 @@
         @php($labelClass = $label==='Berbayar' ? 'bg-amber-100 text-amber-800' : ($label==='Sponsor' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'))
         @php($minPaid = $ticketsCol->where('type','paid')->pluck('price')->filter()->min())
         @php($minSponsorDue = $ticketsCol->where('type','sponsor')->pluck('price')->filter()->min())
+        @php($zeroSponsor = isset($minSponsorDue) && ((float)$minSponsorDue) <= 0)
+        @php($label = ($hasFree || $zeroSponsor) ? 'Percuma' : ($hasSponsor ? 'Sponsor' : 'Berbayar'))
+        @php($labelClass = $label==='Berbayar' ? 'bg-amber-100 text-amber-800' : ($label==='Sponsor' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'))
+        @php($minSponsorBase = $ticketsCol->where('type','sponsor')->pluck('base_price')->filter()->min())
         @php($totalQty = (int) $ticketsCol->sum('quantity'))
         @php($totalSold = (int) $ticketsCol->sum(function($t){ return (int)($t->sold ?? 0); }))
         @php($remain = max(0, $totalQty - $totalSold))
@@ -57,9 +61,8 @@
             @if($label==='Berbayar')
               <span class="font-medium">{{ isset($minPaid) ? ('RM '.number_format($minPaid,2)) : '—' }}</span>
             @elseif($label==='Sponsor')
-              @php($baseDisplay = null)
-              @if($baseDisplay)
-                <span class="line-through mr-2">RM {{ number_format($baseDisplay,2) }}</span>
+              @if(isset($minSponsorBase))
+                <span class="line-through font-bold text-red-600 mr-2">RM {{ number_format($minSponsorBase,2) }}</span>
               @endif
               <span class="font-medium">{{ isset($minSponsorDue) ? ('RM '.number_format($minSponsorDue,2)) : '—' }}</span>
             @else

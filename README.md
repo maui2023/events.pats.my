@@ -1,59 +1,81 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# BeSpoke Events (Event Management System)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Welcome to **BeSpoke Events**, a comprehensive Event Management System (EMS) built under **BeSpoke Sdn Bhd**, led by **Haji Saidy**. This platform is designed to streamline the entire event lifecycle, from ticketing to post-event certification.
 
-## About Laravel
+## 🚀 Project Overview
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+BeSpoke Events acts as a one-stop center for event organizers, offering professional-grade tools to manage events, sell tickets, track attendance, and generate reports.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **Project Lead:** Haji Saidy
+- **Developer:** BeSpoke Sdn Bhd
+- **Framework:** Laravel 12 + FilamentPHP v4
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## ✨ Key Features
 
-## Learning Laravel
+### 🎟️ Ticketing & Event Management
+- **Comprehensive Event Management:** Create, edit, and publish interactive event pages.
+- **Flexible Ticketing:** Support for multiple ticket categories (Free, Paid, VIP).
+- **Payment Integration:** Seamless payment processing via ToyyibPay, FPX, Stripe, and SecurePay.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### 📲 Attendance & Check-in
+- **QR Scan for Presence:** Each attendee receives a unique QR code. Staff can scan this code for instant check-in and attendance tracking.
+- **Real-time Status:** Monitor valid, used, and invalid tickets in real-time.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 🎓 Certification & Passes
+- **Presence Certification:** Automatically generate and distribute certificates of attendance to participants upon successful check-in.
+- **Event Pass Photo Boom:** Create personalized event passes and photo opportunities for attendees.
 
-## Laravel Sponsors
+### 📊 Analytics & Reporting
+- **Dashboard:** Powered by FilamentPHP, providing real-time statistics on ticket sales, revenue, and attendance.
+- **Invoicing:** Automated generation of invoices and receipts.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## 🛠️ Technology Stack
 
-### Premium Partners
+- **Backend:** [Laravel 12](https://laravel.com)
+- **Admin Panel:** [FilamentPHP v4](https://filamentphp.com)
+- **QR Code Generation:** `simplesoftwareio/simple-qrcode`
+- **Frontend:** Blade / Livewire
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## ⚙️ Installation
 
-## Contributing
+To set up the project locally, follow these steps:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd events.pats
+   ```
 
-## Code of Conduct
+2. **Install Dependencies**
+   ```bash
+   composer install
+   npm install && npm run build
+   ```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+3. **Environment Setup**
+   Copy the example environment file and configure your database settings:
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-## Security Vulnerabilities
+4. **Database Migration**
+   Run the migrations to set up the database schema:
+   ```bash
+   php artisan migrate
+   ```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+5. **Serve the Application**
+   Start the local development server:
+   ```bash
+   php artisan serve
+   ```
 
-## License
+## 👥 User Roles
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- **Organizer:** Manage events, tickets, and view reports.
+- **Attendee:** Register, buy tickets, and access event passes.
+- **Admin (BeSpoke HQ):** System-wide monitoring and management.
+
+---
+*Built with ❤️ by BeSpoke Sdn Bhd*
