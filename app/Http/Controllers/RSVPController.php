@@ -200,6 +200,13 @@ class RSVPController extends Controller
             return redirect()->guest('/login');
         }
         $order = Order::findOrFail($orderId);
+        
+        // IDOR Check: Ensure user is the buyer
+        $user = Auth::user();
+        if (strtolower($order->buyer_email) !== strtolower($user->email)) {
+            abort(403, 'Anda tidak mempunyai akses ke pesanan ini.');
+        }
+
         $event = Event::findOrFail($order->event_id);
         $ticket = Ticket::findOrFail($order->ticket_id);
         $attendee = \App\Models\Attendee::where('order_id', $order->id)->first();
@@ -222,6 +229,13 @@ class RSVPController extends Controller
             return redirect()->guest('/login');
         }
         $order = Order::findOrFail($orderId);
+        
+        // IDOR Check: Ensure user is the buyer
+        $user = Auth::user();
+        if (strtolower($order->buyer_email) !== strtolower($user->email)) {
+            abort(403, 'Anda tidak mempunyai akses ke pesanan ini.');
+        }
+
         $event = Event::findOrFail($order->event_id);
         $ticket = Ticket::findOrFail($order->ticket_id);
         $user = Auth::user();
@@ -456,6 +470,7 @@ class RSVPController extends Controller
             return redirect()->guest('/login');
         }
         $order = Order::findOrFail($orderId);
+        $user = Auth::user();
 
         // Ensure attendee exists if order is paid
         $attendee = Attendee::where('order_id', $order->id)->first();
@@ -474,6 +489,14 @@ class RSVPController extends Controller
         
         if (!$attendee) {
             abort(404, 'Tiket tidak dijumpai.');
+        }
+
+        // IDOR Check: Allow if user is the Buyer OR the Attendee
+        $isBuyer = strtolower($order->buyer_email) === strtolower($user->email);
+        $isAttendee = strtolower($attendee->email) === strtolower($user->email);
+        
+        if (!$isBuyer && !$isAttendee) {
+            abort(403, 'Anda tidak mempunyai kebenaran untuk melihat tiket ini.');
         }
 
         $event = Event::findOrFail($order->event_id);
