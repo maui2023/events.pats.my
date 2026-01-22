@@ -37,6 +37,7 @@ class DashboardController extends Controller
         }
 
         $orders = \App\Models\Order::where('buyer_email', $user->email)->orderByDesc('id')->limit(10)->get();
-        return view('dashboard', compact('user', 'events', 'profile', 'wallet', 'orders'));
+        $attendees = \App\Models\Attendee::where('email', $user->email)->with('event')->orderByDesc('id')->limit(20)->get();
+        return view('dashboard', compact('user', 'events', 'profile', 'wallet', 'orders', 'attendees'));
     }
 }

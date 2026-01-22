@@ -88,8 +88,27 @@
             </div>
 
             <div class="border rounded-xl bg-white p-6">
-                <h2 class="text-lg font-medium mb-3">My RSVPs</h2>
-                <p class="text-slate-600">Belum ada RSVP.</p>
+                <h2 class="text-lg font-medium mb-3">Tiket Saya (RSVP)</h2>
+                @if($attendees->isEmpty())
+                    <p class="text-slate-600">Belum ada RSVP.</p>
+                @else
+                    <ul class="space-y-3">
+                        @foreach ($attendees as $att)
+                            <li class="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                                <div>
+                                    <a href="/events/{{ $att->event->slug }}" class="font-medium hover:text-blue-600">{{ $att->event->title }}</a>
+                                    <div class="text-sm text-slate-600">{{ optional($att->event->start_at)->format('d M Y, h:i A') }}</div>
+                                    <div class="text-xs text-slate-500">Attendee: {{ $att->name }}</div>
+                                </div>
+                                <div>
+                                    <a href="{{ route('orders.qr.download', $att->order_id) }}" class="px-3 py-1.5 rounded bg-slate-100 text-slate-700 text-sm hover:bg-slate-200">
+                                        Tiket QR
+                                    </a>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
             </div>
 
             <div class="border rounded-xl bg-white p-6">

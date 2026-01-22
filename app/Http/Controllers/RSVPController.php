@@ -15,10 +15,23 @@ use App\Services\SecurepayService;
 use Illuminate\Support\Facades\Log;
 use App\Models\Profile;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\TicketPurchased;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class RSVPController extends Controller
 {
+    private function ensureOneTicketPerEmail(int $eventId, string $email)
+    {
+        if (Attendee::where('event_id', $eventId)->where('email', $email)->exists()) {
+             // We can abort or redirect back with error. Since this is used in controller methods,
+             // throwing a ValidationException or returning a response is needed.
+             // But simple helper returning boolean is safer for flexible usage.
+             return false;
+        }
+        return true;
+    }
+
     public function store(Request $request, string $slug)
     {
         $event = Event::query()->where('slug', $slug)->where('is_published', true)->firstOrFail();
@@ -30,17 +43,33 @@ class RSVPController extends Controller
             'quantity' => ['required', 'integer', 'min:1'],
         ]);
 
+        // Enforce 1 Ticket Per Email Rule
+        if (Attendee::where('event_id', $event->id)->where('email', $data['email'])->exists()) {
+            return back()->withErrors(['email' => 'Emel ini telah mendaftar untuk tiket acara ini. Satu tiket sahaja dibenarkan bagi setiap emel.']);
+        }
+        // Force quantity to 1 per transaction to simplify logic
+        $data['quantity'] = 1;
+
         $ticket = Ticket::query()->where('id', $data['ticket_id'])->where('event_id', $event->id)->firstOrFail();
 
         if ($ticket->type !== 'free') {
             abort(400);
         }
 
+        // Determine Buyer Info (Payer) vs Attendee Info
+        $buyerName = $data['name'];
+        $buyerEmail = $data['email'];
+        if (Auth::check()) {
+            $user = Auth::user();
+            $buyerName = $user->name;
+            $buyerEmail = $user->email;
+        }
+
         $order = Order::create([
             'event_id' => $event->id,
             'ticket_id' => $ticket->id,
-            'buyer_name' => $data['name'],
-            'buyer_email' => $data['email'],
+            'buyer_name' => $buyerName,
+            'buyer_email' => $buyerEmail,
             'quantity' => $data['quantity'],
             'total_amount' => 0,
             'status' => 'paid',
@@ -56,6 +85,9 @@ class RSVPController extends Controller
         ]);
         $ticket->increment('sold', (int) $data['quantity']);
 
+        // Send Email
+        Mail::to($attendee->email)->queue(new TicketPurchased($attendee));
+
         return redirect()->route('orders.qr.download', $order->id);
     }
 
@@ -69,6 +101,12 @@ class RSVPController extends Controller
             'ticket_id' => ['required', 'integer'],
             'quantity' => ['required', 'integer', 'min:1'],
         ]);
+
+        // Enforce 1 Ticket Per Email Rule
+        if (Attendee::where('event_id', $event->id)->where('email', $data['email'])->exists()) {
+            return back()->withErrors(['email' => 'Emel ini telah mendaftar untuk tiket acara ini. Satu tiket sahaja dibenarkan bagi setiap emel.']);
+        }
+        $data['quantity'] = 1;
 
         $ticket = Ticket::query()->where('id', $data['ticket_id'])->where('event_id', $event->id)->firstOrFail();
 
@@ -103,6 +141,13 @@ class RSVPController extends Controller
         }
 
         $user = Auth::user();
+
+        // Enforce 1 Ticket Per Email Rule
+        if (Attendee::where('event_id', $event->id)->where('email', $user->email)->exists()) {
+             // Redirect to form to buy for someone else
+             return view('events.join_other', compact('event'));
+        }
+
         $ticket = $event->tickets()->orderBy('price')->first();
         if (!$ticket) {
             return redirect()->route('events.show', $event->slug)->withErrors(['ticket' => 'Tiada tiket tersedia.']);
@@ -310,6 +355,8 @@ class RSVPController extends Controller
                     'email' => $order->buyer_email,
                     'qr_code' => Str::uuid()->toString(),
                 ]);
+                // Send Email
+                Mail::to($attendee->email)->queue(new TicketPurchased($attendee));
             }
             $ticket = Ticket::findOrFail($order->ticket_id);
             $ticket->increment('sold', $order->quantity ?? 1);
@@ -421,6 +468,8 @@ class RSVPController extends Controller
                 'email' => $order->buyer_email,
                 'qr_code' => Str::uuid()->toString(),
             ]);
+            // Send Email
+            Mail::to($attendee->email)->queue(new TicketPurchased($attendee));
         }
         
         if (!$attendee) {
