@@ -2,10 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Models\Organization;
+use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,6 +22,7 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         $this->call(CountrySeeder::class);
+        $this->call(StateSeeder::class);
 
         User::query()->updateOrCreate(
             ['email' => 'admin@example.com'],
@@ -30,6 +34,30 @@ class DatabaseSeeder extends Seeder
         );
 
         $organizerId = \App\Models\User::where('email', 'admin@example.com')->value('id');
+        $organizer = \App\Models\User::find($organizerId);
+
+        if ($organizer) {
+            Profile::query()->updateOrCreate(
+                ['user_id' => $organizer->id],
+                ['tier' => 'PRO']
+            );
+        }
+
+        $org = null;
+        if ($organizer) {
+            $org = Organization::query()->updateOrCreate(
+                ['name' => 'BeSpoke Community'],
+                [
+                    'status' => 'approved',
+                    'is_public' => true,
+                    'created_by' => $organizer->id,
+                    'approved_at' => Carbon::now(),
+                ]
+            );
+            $org->users()->syncWithoutDetaching([
+                $organizer->id => ['role' => 'owner', 'status' => 'approved'],
+            ]);
+        }
 
         \App\Models\Event::query()->updateOrCreate(
             ['slug' => 'bespoke-tech-meetup'],
@@ -42,6 +70,7 @@ class DatabaseSeeder extends Seeder
                 'banner_path' => 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1200&auto=format&fit=crop',
                 'is_published' => true,
                 'organizer_id' => $organizerId,
+                'organization_id' => $org?->id,
             ]
         );
 
@@ -56,6 +85,7 @@ class DatabaseSeeder extends Seeder
                 'banner_path' => 'https://images.unsplash.com/photo-1508264165352-258a6ee0a73b?q=80&w=1200&auto=format&fit=crop',
                 'is_published' => true,
                 'organizer_id' => $organizerId,
+                'organization_id' => $org?->id,
             ]
         );
     }

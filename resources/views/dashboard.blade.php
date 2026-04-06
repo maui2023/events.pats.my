@@ -89,6 +89,12 @@
 
             <div class="border rounded-xl bg-white p-6">
                 <h2 class="text-lg font-medium mb-3">Tiket Saya (RSVP)</h2>
+                <form method="GET" action="{{ route('dashboard') }}" class="mb-3 flex items-center gap-2">
+                    <input type="text" name="rsvp_search" value="{{ request('rsvp_search') }}" class="flex-1 border rounded px-3 h-10 text-sm" placeholder="Cari acara / lokasi / nama..." />
+                    <input type="hidden" name="orders_search" value="{{ request('orders_search') }}" />
+                    <input type="hidden" name="attended_search" value="{{ request('attended_search') }}" />
+                    <button class="px-3 h-10 rounded bg-blue-600 text-white text-sm">Search</button>
+                </form>
                 @if($attendees->isEmpty())
                     <p class="text-slate-600">Belum ada RSVP.</p>
                 @else
@@ -96,8 +102,8 @@
                         @foreach ($attendees as $att)
                             <li class="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
                                 <div>
-                                    <a href="/events/{{ $att->event->slug }}" class="font-medium hover:text-blue-600">{{ $att->event->title }}</a>
-                                    <div class="text-sm text-slate-600">{{ optional($att->event->start_at)->format('d M Y, h:i A') }}</div>
+                                    <a href="{{ $att->event ? route('events.show', $att->event->slug) : '#' }}" class="font-medium hover:text-blue-600">{{ $att->event?->title ?? 'Acara' }}</a>
+                                    <div class="text-sm text-slate-600">{{ optional($att->event?->start_at)->format('d M Y, h:i A') }}</div>
                                     <div class="text-xs text-slate-500">Attendee: {{ $att->name }}</div>
                                 </div>
                                 <div>
@@ -108,23 +114,31 @@
                             </li>
                         @endforeach
                     </ul>
+                    <div class="mt-4">
+                        {{ $attendees->links() }}
+                    </div>
                 @endif
             </div>
 
             <div class="border rounded-xl bg-white p-6">
                 <div class="flex items-center justify-between mb-3">
                     <h2 class="text-lg font-medium">Purchased Tickets</h2>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-sm">{{ $orders->count() }}</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-sm">{{ $orders->total() }}</span>
                 </div>
+                <form method="GET" action="{{ route('dashboard') }}" class="mb-3 flex items-center gap-2">
+                    <input type="hidden" name="rsvp_search" value="{{ request('rsvp_search') }}" />
+                    <input type="text" name="orders_search" value="{{ request('orders_search') }}" class="flex-1 border rounded px-3 h-10 text-sm" placeholder="Cari acara / lokasi / status..." />
+                    <input type="hidden" name="attended_search" value="{{ request('attended_search') }}" />
+                    <button class="px-3 h-10 rounded bg-blue-600 text-white text-sm">Search</button>
+                </form>
                 @if ($orders->isEmpty())
                     <p class="text-slate-600">Tiada tiket setakat ini.</p>
                 @else
                     <ul class="space-y-3">
                         @foreach ($orders as $o)
-                            @php($ev = \App\Models\Event::find($o->event_id))
                             <li class="flex items-center justify-between">
                                 <div>
-                                    <a href="{{ route('orders.checkout', $o->id) }}" class="font-medium">{{ $ev?->title ?? 'Acara' }}</a>
+                                    <a href="{{ route('orders.checkout', $o->id) }}" class="font-medium">{{ $o->event?->title ?? 'Acara' }}</a>
                                     <div class="text-sm text-slate-600">Status: {{ strtoupper($o->status) }}, Jumlah: RM {{ number_format((float)$o->total_amount, 2) }}</div>
                                 </div>
                                 @if(strtoupper($o->status) === 'PAID')
@@ -141,12 +155,44 @@
                             </li>
                         @endforeach
                     </ul>
+                    <div class="mt-4">
+                        {{ $orders->links() }}
+                    </div>
                 @endif
             </div>
 
             <div class="border rounded-xl bg-white p-6">
                 <h2 class="text-lg font-medium mb-3">Past Events Attended</h2>
-                <p class="text-slate-600">Belum menghadiri sebarang acara.</p>
+                <form method="GET" action="{{ route('dashboard') }}" class="mb-3 flex items-center gap-2">
+                    <input type="hidden" name="rsvp_search" value="{{ request('rsvp_search') }}" />
+                    <input type="hidden" name="orders_search" value="{{ request('orders_search') }}" />
+                    <input type="text" name="attended_search" value="{{ request('attended_search') }}" class="flex-1 border rounded px-3 h-10 text-sm" placeholder="Cari acara / lokasi / nama..." />
+                    <button class="px-3 h-10 rounded bg-blue-600 text-white text-sm">Search</button>
+                </form>
+                @if(($pastAttended ?? collect())->isEmpty())
+                    <p class="text-slate-600">Belum menghadiri sebarang acara.</p>
+                @else
+                    <ul class="space-y-3">
+                        @foreach ($pastAttended as $att)
+                            @php($ev = $att->event)
+                            <li class="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                                <div>
+                                    <a href="{{ $ev ? route('events.show', $ev->slug) : '#' }}" class="font-medium hover:text-blue-600">{{ $ev?->title ?? 'Acara' }}</a>
+                                    <div class="text-sm text-slate-600">{{ optional($ev?->start_at)->format('d M Y, h:i A') }}</div>
+                                    <div class="text-xs text-slate-500">Checked-in: {{ optional($att->checked_in_at)->format('d M Y, h:i A') }}</div>
+                                </div>
+                                <div>
+                                    <a href="{{ route('orders.qr.download', $att->order_id) }}" class="px-3 py-1.5 rounded bg-slate-100 text-slate-700 text-sm hover:bg-slate-200">
+                                        Tiket QR
+                                    </a>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                    <div class="mt-4">
+                        {{ $pastAttended->links() }}
+                    </div>
+                @endif
             </div>
         </div>
     </div>

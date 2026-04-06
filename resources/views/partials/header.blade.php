@@ -4,6 +4,8 @@
         .header-pill{height:28px;align-items:center;border-radius:.375rem;overflow:hidden;font-size:13px;line-height:1}
         .header-pill a{height:100%;padding:0 12px;display:inline-flex;align-items:center}
         .header-btn{height:28px;align-items:center;padding:0 12px;border-radius:.375rem;font-size:13px;line-height:1}
+        .pill-active{background-color:rgba(229,9,20,.12);color:var(--accent) !important}
+        .hamburger-bar{background-color:var(--text)}
     </style>
     <div class="max-w-6xl mx-auto px-4 sm:px-6 h-12 flex items-center justify-between">
         <a href="/" class="font-semibold text-base leading-none">
@@ -12,6 +14,7 @@
         <nav class="hidden md:flex items-center gap-6 text-sm">
             <a href="/" class="text-slate-700">{{ __('ui.nav.home') }}</a>
             <a href="{{ route('events.discover') }}" class="text-slate-700">{{ __('ui.nav.events') }}</a>
+            <a href="{{ route('calendars.index') }}" class="text-slate-700">Calendars</a>
             <a href="/create" class="text-slate-700">{{ __('ui.nav.create') }}</a>
             @auth
                 <a href="/dashboard" class="text-slate-700">{{ __('ui.nav.dashboard') }}</a>
@@ -19,8 +22,8 @@
         </nav>
         <div class="header-controls">
             <div class="header-pill hidden md:inline-flex">
-                <a href="{{ route('lang.switch', 'ms') }}" class="{{ app()->getLocale()==='ms' ? 'bg-blue-50 text-blue-600' : 'text-slate-700' }}">BM</a>
-                <a href="{{ route('lang.switch', 'en') }}" class="border-l {{ app()->getLocale()==='en' ? 'bg-blue-50 text-blue-600' : 'text-slate-700' }}">EN</a>
+                <a href="{{ route('lang.switch', 'ms') }}" class="{{ app()->getLocale()==='ms' ? 'pill-active' : 'text-slate-700' }}">BM</a>
+                <a href="{{ route('lang.switch', 'en') }}" class="border-l {{ app()->getLocale()==='en' ? 'pill-active' : 'text-slate-700' }}">EN</a>
             </div>
             <button id="themeToggle" class="header-btn hidden md:inline-flex">
                 Dark
@@ -35,9 +38,9 @@
             @endauth
             <button id="menuToggle" class="md:hidden px-3 py-2 border rounded text-sm">
                 <span class="inline-block w-5">
-                    <span class="block h-0.5 bg-slate-700 mb-1"></span>
-                    <span class="block h-0.5 bg-slate-700 mb-1"></span>
-                    <span class="block h-0.5 bg-slate-700"></span>
+                    <span class="block h-0.5 hamburger-bar mb-1"></span>
+                    <span class="block h-0.5 hamburger-bar mb-1"></span>
+                    <span class="block h-0.5 hamburger-bar"></span>
                 </span>
             </button>
         </div>
@@ -46,13 +49,14 @@
         <div class="max-w-6xl mx-auto px-4 py-3 space-y-3 text-sm">
             <a href="/" class="block">{{ __('ui.nav.home') }}</a>
             <a href="{{ route('events.discover') }}" class="block">{{ __('ui.nav.events') }}</a>
+            <a href="{{ route('calendars.index') }}" class="block">Calendars</a>
             <a href="/create" class="block">{{ __('ui.nav.create') }}</a>
             @auth
                 <a href="/dashboard" class="block">{{ __('ui.nav.dashboard') }}</a>
             @endauth
             <div class="inline-flex rounded border overflow-hidden text-xs">
-                <a href="{{ route('lang.switch', 'ms') }}" class="px-3 py-1 {{ app()->getLocale()==='ms' ? 'bg-blue-50 text-blue-600' : 'text-slate-700' }}">BM</a>
-                <a href="{{ route('lang.switch', 'en') }}" class="px-3 py-1 border-l {{ app()->getLocale()==='en' ? 'bg-blue-50 text-blue-600' : 'text-slate-700' }}">EN</a>
+                <a href="{{ route('lang.switch', 'ms') }}" class="px-3 py-1 {{ app()->getLocale()==='ms' ? 'pill-active' : 'text-slate-700' }}">BM</a>
+                <a href="{{ route('lang.switch', 'en') }}" class="px-3 py-1 border-l {{ app()->getLocale()==='en' ? 'pill-active' : 'text-slate-700' }}">EN</a>
             </div>
             <div>
                 @auth
@@ -81,7 +85,8 @@
             var btnM=document.getElementById('themeToggleMobile');
             function getTheme(){
                 var saved=localStorage.getItem('theme');
-                return saved==='light'?'light':'dark';
+                if(saved==='light' || saved==='dark'){return saved;}
+                return 'light';
             }
             function applyTheme(theme){
                 root.setAttribute('data-theme',theme);

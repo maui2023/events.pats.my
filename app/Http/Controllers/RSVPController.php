@@ -136,7 +136,7 @@ class RSVPController extends Controller
         $event = Event::query()->where('slug', $slug)->where('is_published', true)->firstOrFail();
 
         if (!Auth::check()) {
-            $request->session()->put('url.intended', route('events.join', $slug));
+            $request->session()->put('url.intended', $request->fullUrl());
             return redirect()->guest('/login');
         }
 
@@ -148,9 +148,18 @@ class RSVPController extends Controller
              return view('events.join_other', compact('event'));
         }
 
-        $ticket = $event->tickets()->orderBy('price')->first();
+        $ticketId = $request->integer('ticket_id');
+        $ticket = $ticketId
+            ? $event->tickets()->whereKey($ticketId)->first()
+            : $event->tickets()->orderBy('price')->first();
+
         if (!$ticket) {
             return redirect()->route('events.show', $event->slug)->withErrors(['ticket' => 'Tiada tiket tersedia.']);
+        }
+
+        $remain = max(0, ((int) $ticket->quantity) - ((int) $ticket->sold));
+        if ($remain <= 0) {
+            return redirect()->route('events.show', $event->slug)->withErrors(['ticket' => 'Tiket telah habis (sold out).']);
         }
 
         if ($ticket->type === 'free' || ((float)($ticket->price ?? 0)) <= 0) {

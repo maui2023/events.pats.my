@@ -2,28 +2,16 @@
 
 @section('content')
     <section class="relative overflow-hidden home-hero">
-        <style>
-            .blob{position:absolute;border-radius:50%;filter:blur(40px);opacity:.35}
-            .blob.b1{width:280px;height:280px;background:#b91c1c;top:-60px;left:-60px;animation:float1 8s ease-in-out infinite}
-            .blob.b2{width:320px;height:320px;background:#4b5563;top:20%;right:-80px;animation:float2 9s ease-in-out infinite}
-            .blob.b3{width:220px;height:220px;background:#111827;bottom:-60px;left:40%;animation:float3 10s ease-in-out infinite}
-            @keyframes float1{0%{transform:translateY(0)}50%{transform:translateY(-10px)}100%{transform:translateY(0)}}
-            @keyframes float2{0%{transform:translateX(0)}50%{transform:translateX(-12px)}100%{transform:translateX(0)}}
-            @keyframes float3{0%{transform:translate(-8px,0)}50%{transform:translate(8px,-6px)}100%{transform:translate(-8px,0)}}
-        </style>
-        <span class="blob b1"></span>
-        <span class="blob b2"></span>
-        <span class="blob b3"></span>
         <div class="relative max-w-5xl mx-auto px-4 sm:px-6 py-12 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div>
                 <h1 class="text-4xl font-semibold mb-3">{{ __('ui.hero.title') }}</h1>
                 <p class="text-slate-600 mb-6">{{ __('ui.hero.subtitle') }}</p>
                 <div class="flex gap-3">
-                    <a href="/create" class="inline-block bg-blue-600 text-white px-5 py-2 rounded">{{ __('ui.cta.create') }}</a>
-                    <a href="{{ route('events.discover') }}" class="inline-block bg-white border px-5 py-2 rounded">{{ __('ui.cta.browse') }}</a>
+                    <a href="/create" class="inline-block btn-accent px-5 py-2 rounded">{{ __('ui.cta.create') }}</a>
+                    <a href="{{ route('events.discover') }}" class="inline-block btn-surface px-5 py-2 rounded">{{ __('ui.cta.browse') }}</a>
                 </div>
             </div>
-            <div class="bg-white border rounded-lg p-6 shadow-sm">
+            <div class="app-card rounded-lg p-6 shadow-sm">
                 <h3 class="text-lg font-medium mb-4">{{ __('ui.features.title') }}</h3>
                 <ul class="space-y-3 text-slate-700">
                     <li class="flex items-center gap-3"><span class="inline-flex size-8 rounded-lg bg-red-100 items-center justify-center">🎟️</span><span>{{ __('ui.feature.create') }}</span></li>
@@ -59,8 +47,8 @@
                             <div class="w-full h-40 bg-slate-100 flex items-center justify-center text-slate-500">No image</div>
                         @endif
                         <span class="absolute top-2 left-2 text-xs px-2 py-1 rounded-full border {{ $pricingClass }}">{{ $pricing }}</span>
-                        <span class="absolute top-2 right-2 text-xs px-2 py-1 rounded-full bg-white/90 border text-slate-900">{{ optional($event->start_at)->format('d M Y') }}</span>
-                        <span class="absolute bottom-2 right-2 text-xs px-2 py-1 rounded-full bg-white/90 border text-slate-900">Baki: {{ $remain }}</span>
+                        <span class="absolute top-2 right-2 text-xs px-2 py-1 rounded-full badge-pill">{{ optional($event->start_at)->format('d M Y') }}</span>
+                        <span class="absolute bottom-2 right-2 text-xs px-2 py-1 rounded-full badge-pill">Baki tiket: {{ $remain }}</span>
                     </div>
                     <div class="p-4">
                         <div class="mb-2">

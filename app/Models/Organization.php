@@ -12,12 +12,14 @@ class Organization extends Model
     protected $fillable = [
         'name',
         'status',
+        'is_public',
         'created_by',
         'approved_at',
     ];
 
     protected $casts = [
         'approved_at' => 'datetime',
+        'is_public' => 'boolean',
     ];
 
     public function users()
@@ -28,5 +30,10 @@ class Organization extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function events()
+    {
+        return $this->hasMany(Event::class);
     }
 }

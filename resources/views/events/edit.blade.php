@@ -20,6 +20,40 @@
             </div>
         </div>
         <div class="border rounded p-4">
+            <div class="font-medium mb-2">Icon & Kategori</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm mb-1">Icon</label>
+                    @php($selectedIcon = old('icon', $event->icon))
+                    <select name="icon" class="w-full border rounded px-3 h-10">
+                        <option value="">Auto</option>
+                        @foreach(($categories ?? []) as $c)
+                            <option value="{{ $c['icon'] }}" {{ $selectedIcon === $c['icon'] ? 'selected' : '' }}>{{ $c['icon'] }} {{ $c['label'] }}</option>
+                        @endforeach
+                        <option value="🎟️" {{ $selectedIcon === '🎟️' ? 'selected' : '' }}>🎟️ Ticket</option>
+                        <option value="🎤" {{ $selectedIcon === '🎤' ? 'selected' : '' }}>🎤 Talk</option>
+                        <option value="🎓" {{ $selectedIcon === '🎓' ? 'selected' : '' }}>🎓 Training</option>
+                        <option value="🎉" {{ $selectedIcon === '🎉' ? 'selected' : '' }}>🎉 Celebration</option>
+                    </select>
+                    <div class="text-xs text-slate-500 mt-1">Jika Auto, sistem guna icon kategori pertama (atau 🌍 jika tiada).</div>
+                </div>
+                <div>
+                    <label class="block text-sm mb-2">Browse by Category (Multi pilih)</label>
+                    @php($selectedCats = old('category_keys', $event->category_keys ?? []))
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        @foreach(($categories ?? []) as $c)
+                            <label class="flex items-center gap-2 border rounded-lg px-3 py-2 text-sm">
+                                <input type="checkbox" name="category_keys[]" value="{{ $c['key'] }}" {{ in_array($c['key'], $selectedCats, true) ? 'checked' : '' }} />
+                                <span class="w-6 text-center">{{ $c['icon'] }}</span>
+                                <span class="truncate">{{ $c['label'] }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div class="text-xs text-slate-500 mt-2">Acara akan muncul hanya pada kategori yang dipilih (World Topic boleh digunakan untuk “general”).</div>
+                </div>
+            </div>
+        </div>
+        <div class="border rounded p-4">
             <div class="font-medium mb-2">Jenis Harga</div>
             @php($pricingType = old('pricing_type', optional($ticket)->type))
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
@@ -179,14 +213,24 @@
             </div>
             <div>
                 <label class="block text-sm mb-1">Negara</label>
+                @php($selectedCountry = old('country', $event->country ?: 'MY'))
                 <select name="country" class="w-full border rounded px-3 h-10">
                     <option value="">Pilih Negara</option>
                     @foreach(($countries ?? []) as $c)
-                        <option value="{{ $c['code'] }}" {{ old('country', $event->country) === $c['code'] ? 'selected' : '' }}>
+                        <option value="{{ $c['code'] }}" {{ $selectedCountry === $c['code'] ? 'selected' : '' }}>
                             {{ $c['name'] }} {{ $c['emoji'] }}
                         </option>
                     @endforeach
                 </select>
+            </div>
+        </div>
+        <div id="stateWrap" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm mb-1">Negeri</label>
+                <select name="state_id" id="stateSelect" class="w-full border rounded px-3 h-10">
+                    <option value="">Pilih Negeri</option>
+                </select>
+                <div class="text-xs text-slate-500 mt-1">Pilih negara dahulu untuk senarai negeri.</div>
             </div>
         </div>
         <label class="flex items-center gap-2 text-sm">
@@ -198,6 +242,9 @@
             <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">Simpan</button>
         </div>
     </form>
+    <div id="tierConfig" class="hidden" data-tier="{{ $tier ?? 'FREE' }}" data-max-participants="{{ ($tierLimits['max_participants'] ?? 0) > 0 ? ($tierLimits['max_participants'] ?? '') : '' }}" data-max-days="{{ ($tierLimits['max_days'] ?? 0) > 0 ? ($tierLimits['max_days'] ?? '') : '' }}"></div>
+    <textarea id="statesByCountryData" class="hidden">{{ json_encode($statesByCountry ?? []) }}</textarea>
+    <input type="hidden" id="stateSelected" value="{{ old('state_id', $event->state_id) }}" />
 </div>
 
 <!-- Modal Tambah Petugas -->
@@ -249,6 +296,41 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
   (function(){
+    function parseStatesByCountry(){
+      var el = document.getElementById('statesByCountryData');
+      if (!el) return {};
+      try { return JSON.parse(el.value || '{}') || {}; } catch (e) { return {}; }
+    }
+    function refreshStates(){
+      var countryEl = document.querySelector('select[name="country"]');
+      var stateEl = document.querySelector('select[name="state_id"]');
+      var wrap = document.getElementById('stateWrap');
+      if (!countryEl || !stateEl) return;
+      var map = parseStatesByCountry();
+      var country = (countryEl.value || '').toUpperCase();
+      var list = map[country] || [];
+      stateEl.innerHTML = '';
+      var opt0 = document.createElement('option');
+      opt0.value = '';
+      opt0.textContent = 'Pilih Negeri';
+      stateEl.appendChild(opt0);
+      list.forEach(function(item){
+        var o = document.createElement('option');
+        o.value = String(item.id);
+        o.textContent = item.name;
+        stateEl.appendChild(o);
+      });
+      var selected = (document.getElementById('stateSelected')?.value || '').trim();
+      if (selected) stateEl.value = selected;
+      if (wrap) wrap.style.display = list.length ? '' : 'none';
+    }
+    var cEl = document.querySelector('select[name="country"]');
+    if (cEl) cEl.addEventListener('change', function(){
+      var s = document.getElementById('stateSelected'); if (s) s.value = '';
+      refreshStates();
+    });
+    refreshStates();
+
     var mapEl = document.getElementById('eventMap');
     if (!mapEl) return;
     var lat = parseFloat(document.getElementById('locationLat').value || '3.1390');
@@ -282,6 +364,7 @@
               if (text.includes(name)) { countryEl.value = opt2.value; matched = true; break; }
             }
           }
+          try { countryEl.dispatchEvent(new Event('change')); } catch (e) {}
         }
       }
     }
@@ -322,9 +405,12 @@
     document.getElementById('mapSearch').addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); search(); } });
 
     // Pricing toggles & indicators
-    var tier = '{{ $tier ?? 'FREE' }}';
-    var maxParticipants = {{ ($tierLimits['max_participants'] ?? 0) > 0 ? ($tierLimits['max_participants']) : 'null' }};
-    var maxDays = {{ ($tierLimits['max_days'] ?? 0) > 0 ? ($tierLimits['max_days']) : 'null' }};
+    var cfgEl = document.getElementById('tierConfig');
+    var tier = cfgEl ? (cfgEl.getAttribute('data-tier') || 'FREE') : 'FREE';
+    var maxParticipantsRaw = cfgEl ? (cfgEl.getAttribute('data-max-participants') || '') : '';
+    var maxParticipants = maxParticipantsRaw ? parseInt(maxParticipantsRaw, 10) : null;
+    var maxDaysRaw = cfgEl ? (cfgEl.getAttribute('data-max-days') || '') : '';
+    var maxDays = maxDaysRaw ? parseInt(maxDaysRaw, 10) : null;
     function setDisabled(containerId, disabled){
       var box = document.getElementById(containerId);
       if (!box) return;

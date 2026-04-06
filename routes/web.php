@@ -10,6 +10,9 @@ use App\Http\Controllers\RSVPController;
 use App\Http\Controllers\CheckinController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\EventManageController;
+use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\PasswordResetController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
@@ -18,6 +21,10 @@ Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
 Route::post('/register', [AuthController::class, 'register'])->name('register.post');
+Route::get('/forgot-password', [PasswordResetController::class, 'requestForm'])->name('password.request');
+Route::post('/forgot-password', [PasswordResetController::class, 'sendLink'])->name('password.email');
+Route::get('/reset-password/{token}', [PasswordResetController::class, 'resetForm'])->name('password.reset');
+Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name('password.update');
 
 Route::get('/events/{slug}', [EventPublicController::class, 'show'])->name('events.show');
 Route::post('/events/{slug}/rsvp', [RSVPController::class, 'store'])->name('events.rsvp');
@@ -25,8 +32,13 @@ Route::post('/events/{slug}/buy', [RSVPController::class, 'purchase'])->name('ev
 Route::get('/events/{slug}/join', [RSVPController::class, 'join'])->name('events.join');
 Route::get('/events/{slug}/edit', [CreateEventController::class, 'edit'])->name('events.edit');
 Route::post('/events/{slug}/edit', [CreateEventController::class, 'update'])->name('events.update');
+Route::delete('/events/{slug}', [CreateEventController::class, 'destroy'])->name('events.destroy');
 Route::post('/events/{slug}/staff', [CreateEventController::class, 'addStaff'])->name('events.staff.add');
 Route::delete('/events/{slug}/staff/{staffId}', [CreateEventController::class, 'removeStaff'])->name('events.staff.remove');
+
+Route::get('/events/{slug}/manage', [EventManageController::class, 'index'])->name('events.manage');
+Route::delete('/events/{slug}/orders/{order}', [EventManageController::class, 'destroyOrder'])->name('events.orders.destroy');
+Route::get('/certificates/{uuid}', [EventManageController::class, 'showCertificate'])->name('certificates.show');
 
 Route::get('/events/{slug}/qr/{code}', function (string $slug, string $code) {
     $attendee = \App\Models\Attendee::where('qr_code', $code)->firstOrFail();
@@ -39,6 +51,8 @@ Route::get('/events/{slug}/scan', [CheckinController::class, 'scanner'])->name('
 Route::get('/checkin/{code}', [CheckinController::class, 'show'])->name('checkin.show');
 Route::post('/checkin/{code}', [CheckinController::class, 'scan'])->name('checkin.scan');
 Route::get('/discover', [EventPublicController::class, 'index'])->name('events.discover');
+Route::get('/calendars', [CalendarController::class, 'index'])->name('calendars.index');
+Route::get('/calendars/{organization}', [CalendarController::class, 'show'])->name('calendars.show');
 
 Route::get('/create', [CreateEventController::class, 'index'])->name('events.create');
 Route::post('/create', [CreateEventController::class, 'store'])->name('events.store');
@@ -68,7 +82,6 @@ Route::get('/lang/{locale}', function (string $locale) {
     session(['app_locale' => $locale]);
     return Redirect::back();
 })->name('lang.switch');
-Route::get('/orders/{order}/checkout', [RSVPController::class, 'checkout'])->name('orders.checkout');
 Route::get('/orders/{order}/checkout', [RSVPController::class, 'checkout'])->name('orders.checkout');
 Route::match(['get', 'post'], '/orders/{order}/pay', [RSVPController::class, 'pay'])->name('orders.pay');
 Route::get('/payments/toyyib/return/{order}', [RSVPController::class, 'toyyibReturn'])->name('payments.toyyib.return');

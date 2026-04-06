@@ -2,19 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request;
+use App\Models\Organization;
 use App\Models\Profile;
 use App\Models\Wallet;
-use App\Models\Organization;
-use Illuminate\Support\Facades\Hash;
 use App\Services\SecurepayService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class ProfileController extends Controller
 {
     public function show(Request $request)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->guest('/login');
         }
 
@@ -30,7 +30,7 @@ class ProfileController extends Controller
 
     public function setWalletLabel(Request $request)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->guest('/login');
         }
 
@@ -44,14 +44,14 @@ class ProfileController extends Controller
             return back()->withErrors(['wallet_id' => 'Wallet Label telah ditetapkan dan tidak boleh diubah.']);
         }
 
-        if (!$wallet) {
+        if (! $wallet) {
             $wallet = new Wallet(['user_id' => $user->id]);
         }
 
         $wallet->wallet_id = $data['wallet_id'];
 
         try {
-            $svc = new \App\Services\AyuWalletService();
+            $svc = new \App\Services\AyuWalletService;
             $address = $svc->getNewAddress($wallet->wallet_id);
             if (empty($address)) {
                 return back()->withErrors(['wallet_id' => 'Tidak dapat menjana alamat wallet. Sila cuba lagi.']);
@@ -68,7 +68,7 @@ class ProfileController extends Controller
 
     public function update(Request $request)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->guest('/login');
         }
 
@@ -91,7 +91,7 @@ class ProfileController extends Controller
             $file = $request->file('avatar');
             $filename = 'avatar_'.$user->id.'_'.time().'.'.$file->getClientOriginalExtension();
             $dir = public_path('uploads/avatars');
-            if (!is_dir($dir)) {
+            if (! is_dir($dir)) {
                 @mkdir($dir, 0755, true);
             }
             $file->move($dir, $filename);
@@ -105,7 +105,7 @@ class ProfileController extends Controller
 
     public function updatePassword(Request $request)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->guest('/login');
         }
 
@@ -115,7 +115,7 @@ class ProfileController extends Controller
             'new_password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        if (!Hash::check($data['current_password'], $user->password)) {
+        if (! Hash::check($data['current_password'], $user->password)) {
             return back()->withErrors(['current_password' => 'Kata laluan semasa tidak tepat.']);
         }
 
@@ -127,43 +127,49 @@ class ProfileController extends Controller
 
     public function createOrganization(Request $request)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->guest('/login');
         }
         $user = Auth::user();
         $profile = Profile::firstOrCreate(['user_id' => $user->id]);
-        if (!in_array($profile->tier, ['PRO', 'VIP'])) {
+        if (! in_array($profile->tier, ['PRO', 'VIP'])) {
             return back()->withErrors(['organization' => 'Hanya PRO/VIP boleh cipta organisasi.']);
         }
-        $data = $request->validate(['name' => ['required','string','max:120']]);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'is_public' => ['required', 'boolean'],
+        ]);
         $org = Organization::create([
             'name' => $data['name'],
             'status' => 'pending',
+            'is_public' => (bool) $data['is_public'],
             'created_by' => $user->id,
         ]);
         $org->users()->attach($user->id, ['role' => 'owner', 'status' => 'approved']);
+
         return redirect()->route('profile.show')->with('status', 'Organisasi dicipta dan menunggu kelulusan admin.');
     }
 
     public function joinOrganization(Request $request)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->guest('/login');
         }
         $user = Auth::user();
         $profile = Profile::firstOrCreate(['user_id' => $user->id]);
-        if (!in_array($profile->tier, ['PRO', 'VIP'])) {
+        if (! in_array($profile->tier, ['PRO', 'VIP'])) {
             return back()->withErrors(['organization' => 'Hanya PRO/VIP boleh menyertai organisasi.']);
         }
-        $data = $request->validate(['organization_id' => ['required','integer','exists:organizations,id']]);
+        $data = $request->validate(['organization_id' => ['required', 'integer', 'exists:organizations,id']]);
         $org = Organization::find($data['organization_id']);
         $org->users()->syncWithoutDetaching([$user->id => ['role' => 'member', 'status' => 'pending']]);
+
         return redirect()->route('profile.show')->with('status', 'Permohonan menyertai organisasi dihantar. Menunggu kelulusan pencipta.');
     }
 
     public function manageOrganizations()
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->guest('/login');
         }
         $user = Auth::user();
@@ -181,8 +187,9 @@ class ProfileController extends Controller
 
     public function upgradeProPay(Request $request)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             $request->session()->put('url.intended', route('pricing'));
+
             return redirect()->guest('/login');
         }
 
@@ -201,7 +208,7 @@ class ProfileController extends Controller
             return back()->withErrors(['payment' => 'Sila lengkapkan nombor telefon di Profil sebelum membuat pembayaran (Profil > Maklumat Perhubungan).']);
         }
 
-        $svc = new SecurepayService();
+        $svc = new SecurepayService;
         $returnUrl = route('pricing.pro.return');
         $callbackUrl = url('subscriptions/securepay/callback');
 
@@ -225,7 +232,7 @@ class ProfileController extends Controller
             }
 
             $payUrl = $paymentData['payment_url'] ?? $paymentData['url'] ?? null;
-            if (!$payUrl) {
+            if (! $payUrl) {
                 return back()->withErrors(['payment' => 'Gagal memulakan pembayaran Pro (URL tidak sah).']);
             }
 
@@ -237,8 +244,9 @@ class ProfileController extends Controller
 
     public function upgradeProReturn(Request $request)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             $request->session()->put('url.intended', route('pricing'));
+
             return redirect()->guest('/login');
         }
 
@@ -249,6 +257,7 @@ class ProfileController extends Controller
         if ($status === 'true' || $status === '1' || $status === true) {
             $profile->tier = 'PRO';
             $profile->save();
+
             return redirect()->route('profile.show')->with('status', 'Tahniah! Akaun anda telah dinaik taraf ke PRO.');
         }
 
@@ -275,29 +284,31 @@ class ProfileController extends Controller
 
     public function approveMembership(Request $request, Organization $organization, int $memberId)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->guest('/login');
         }
         $user = Auth::user();
         $isOwner = $organization->created_by === $user->id || $organization->users()->wherePivot('role', 'owner')->where('users.id', $user->id)->exists();
-        if (!$isOwner) {
+        if (! $isOwner) {
             return back()->withErrors(['organization' => 'Anda tidak mempunyai kebenaran.']);
         }
         $organization->users()->updateExistingPivot($memberId, ['status' => 'approved']);
+
         return back()->with('status', 'Permohonan diluluskan.');
     }
 
     public function rejectMembership(Request $request, Organization $organization, int $memberId)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->guest('/login');
         }
         $user = Auth::user();
         $isOwner = $organization->created_by === $user->id || $organization->users()->wherePivot('role', 'owner')->where('users.id', $user->id)->exists();
-        if (!$isOwner) {
+        if (! $isOwner) {
             return back()->withErrors(['organization' => 'Anda tidak mempunyai kebenaran.']);
         }
         $organization->users()->detach($memberId);
+
         return back()->with('status', 'Permohonan ditolak.');
     }
 }

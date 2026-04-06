@@ -31,7 +31,7 @@
                         <input type="checkbox" name="remember" class="border" />
                         <span>Ingat saya</span>
                     </label>
-                    <a href="#" class="text-sm text-blue-600">Lupa kata laluan?</a>
+                    <a href="{{ route('password.request') }}" class="text-sm text-blue-600">Lupa kata laluan?</a>
                 </div>
                 <div class="flex items-center justify-between">
                     <a href="{{ route('register') }}" class="px-4 py-2 border rounded text-sm">Daftar / Register</a>

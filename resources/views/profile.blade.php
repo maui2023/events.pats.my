@@ -119,6 +119,10 @@
                             @csrf
                             <div class="font-medium mb-2">Cipta Organisasi</div>
                             <input type="text" name="name" class="w-full border rounded px-3 py-2 mb-2" placeholder="Nama organisasi" />
+                            <select name="is_public" class="w-full border rounded px-3 py-2 mb-2">
+                                <option value="1" selected>Public (Acara boleh dilihat umum)</option>
+                                <option value="0">Private (Acara hanya ahli boleh lihat)</option>
+                            </select>
                             <button class="px-3 py-1.5 rounded bg-blue-600 text-white text-sm">Cipta</button>
                         </form>
 

@@ -9,6 +9,8 @@ use App\Models\Event;
 use App\Models\Country;
 use App\Models\Ticket;
 use App\Models\Profile;
+use App\Models\State;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 
 class CreateEventController extends Controller
@@ -46,7 +48,14 @@ class CreateEventController extends Controller
         if (in_array($tier, ['PRO','VIP'])) {
             $organizations = $user->organizations()->wherePivot('status','approved')->orderBy('name')->get();
         }
-        return view('events.create', ['countries' => $countries, 'tier' => $tier, 'tierLimits' => $tierLimits, 'organizations' => $organizations]);
+        $statesByCountry = State::query()
+            ->orderBy('name')
+            ->get()
+            ->groupBy('country_code')
+            ->map(fn ($items) => $items->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values())
+            ->all();
+        $categories = Event::categoryDefinitions();
+        return view('events.create', ['countries' => $countries, 'tier' => $tier, 'tierLimits' => $tierLimits, 'organizations' => $organizations, 'categories' => $categories, 'statesByCountry' => $statesByCountry]);
     }
 
     public function edit(Request $request, string $slug)
@@ -87,8 +96,15 @@ class CreateEventController extends Controller
         }
         
         $staffs = \App\Models\EventStaff::with('user')->where('event_id', $event->id)->get();
-        
-        return view('events.edit', compact('event', 'countries', 'ticket', 'tier', 'tierLimits', 'organizations', 'staffs'));
+        $categories = Event::categoryDefinitions();
+        $statesByCountry = State::query()
+            ->orderBy('name')
+            ->get()
+            ->groupBy('country_code')
+            ->map(fn ($items) => $items->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])->values())
+            ->all();
+
+        return view('events.edit', compact('event', 'countries', 'ticket', 'tier', 'tierLimits', 'organizations', 'staffs', 'categories', 'statesByCountry'));
     }
 
     public function addStaff(Request $request, string $slug)
@@ -155,6 +171,9 @@ class CreateEventController extends Controller
             'country' => ['nullable', 'string', 'max:100'],
             'banner_path' => ['nullable', 'string', 'max:500'],
             'banner_file' => ['nullable', 'image', 'max:5120'],
+            'icon' => ['nullable', 'string', 'max:16'],
+            'category_keys' => ['nullable', 'array', 'max:9'],
+            'category_keys.*' => ['string', Rule::in(Event::categoryKeys())],
             'is_published' => ['nullable', 'boolean'],
             'pricing_type' => ['nullable', 'in:free,paid,sponsor'],
             'ticket_price' => ['nullable', 'numeric', 'min:0'],
@@ -162,6 +181,7 @@ class CreateEventController extends Controller
             'ticket_sponsor_amount' => ['nullable', 'numeric', 'min:0'],
             'ticket_quantity' => ['nullable', 'integer', 'min:0'],
             'organization_id' => ['nullable','integer','exists:organizations,id'],
+            'state_id' => ['nullable', 'integer', 'exists:states,id'],
         ]);
 
         $user = Auth::user();
@@ -231,6 +251,17 @@ class CreateEventController extends Controller
             $organizationId = (int)$data['organization_id'];
         }
 
+        $cats = array_values(array_unique($data['category_keys'] ?? []));
+        $cats = array_values(array_filter($cats, fn ($v) => is_string($v) && $v !== ''));
+        $countryCode = $data['country'] ?? 'MY';
+        $stateId = !empty($data['state_id']) ? (int) $data['state_id'] : null;
+        if ($stateId) {
+            $isValidState = State::query()->whereKey($stateId)->where('country_code', $countryCode)->exists();
+            if (!$isValidState) {
+                return back()->withErrors(['state_id' => 'Negeri tidak sepadan dengan negara dipilih.'])->withInput();
+            }
+        }
+
         $event = Event::create([
             'organizer_id' => Auth::id(),
             'organization_id' => $organizationId,
@@ -242,7 +273,10 @@ class CreateEventController extends Controller
             'location' => $data['location'] ?? null,
             'postcode' => $data['postcode'] ?? null,
             'country' => $data['country'] ?? null,
+            'state_id' => $stateId,
             'banner_path' => $bannerPath,
+            'icon' => ($data['icon'] ?? null) ?: null,
+            'category_keys' => empty($cats) ? null : $cats,
             'is_published' => (bool)($data['is_published'] ?? false),
         ]);
 
@@ -305,6 +339,9 @@ class CreateEventController extends Controller
             'country' => ['nullable', 'string', 'max:100'],
             'banner_path' => ['nullable', 'string', 'max:500'],
             'banner_file' => ['nullable', 'image', 'max:5120'],
+            'icon' => ['nullable', 'string', 'max:16'],
+            'category_keys' => ['nullable', 'array', 'max:9'],
+            'category_keys.*' => ['string', Rule::in(Event::categoryKeys())],
             'is_published' => ['nullable', 'boolean'],
             'pricing_type' => ['nullable', 'in:free,paid,sponsor'],
             'ticket_price' => ['nullable', 'numeric', 'min:0'],
@@ -312,6 +349,7 @@ class CreateEventController extends Controller
             'ticket_sponsor_amount' => ['nullable', 'numeric', 'min:0'],
             'ticket_quantity' => ['nullable', 'integer', 'min:0'],
             'organization_id' => ['nullable','integer','exists:organizations,id'],
+            'state_id' => ['nullable', 'integer', 'exists:states,id'],
         ]);
 
         $user = Auth::user();
@@ -367,7 +405,20 @@ class CreateEventController extends Controller
         $event->location = $data['location'] ?? null;
         $event->postcode = $data['postcode'] ?? null;
         $event->country = $data['country'] ?? null;
+        $countryCode = $data['country'] ?? 'MY';
+        $stateId = !empty($data['state_id']) ? (int) $data['state_id'] : null;
+        if ($stateId) {
+            $isValidState = State::query()->whereKey($stateId)->where('country_code', $countryCode)->exists();
+            if (!$isValidState) {
+                return back()->withErrors(['state_id' => 'Negeri tidak sepadan dengan negara dipilih.'])->withInput();
+            }
+        }
         $event->banner_path = $bannerPath;
+        $event->icon = ($data['icon'] ?? null) ?: null;
+        $cats = array_values(array_unique($data['category_keys'] ?? []));
+        $cats = array_values(array_filter($cats, fn ($v) => is_string($v) && $v !== ''));
+        $event->category_keys = empty($cats) ? null : $cats;
+        $event->state_id = $stateId;
         $event->is_published = (bool)($data['is_published'] ?? false);
         $event->organization_id = $organizationId;
         $event->save();
@@ -408,5 +459,32 @@ class CreateEventController extends Controller
         }
 
         return redirect()->to('/events/'.$event->slug);
+    }
+
+    public function destroy(string $slug)
+    {
+        if (!Auth::check()) {
+            return redirect()->guest('/login');
+        }
+
+        $event = Event::where('slug', $slug)->firstOrFail();
+
+        // Owner check
+        if ($event->organizer_id !== Auth::id()) {
+            abort(403);
+        }
+
+        // Check for attendees (data yang mendaftar masuk)
+        if ($event->attendees()->count() > 0) {
+            return back()->withErrors(['delete' => 'Acara ini sudah mempunyai peserta berdaftar. Anda tidak boleh memadamnya.']);
+        }
+
+        // Cleanup
+        $event->staffs()->delete();
+        $event->orders()->delete();
+        $event->tickets()->delete();
+        $event->delete();
+
+        return redirect()->route('dashboard')->with('success', 'Acara berjaya dipadam.');
     }
 }
